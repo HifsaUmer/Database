@@ -286,7 +286,7 @@
                     </div>
                     <div class="info-item">
                         <div class="info-label">Program/Degree</div>
-                        <div x-text="studentData.student.degree_name || 'Not specified'"></div>
+                        <div x-text="studentData.student.degree_name || 'BSCS'"></div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Overall CGPA</div>
@@ -301,26 +301,19 @@
                 <!-- Academic History -->
                 <h3>Academic Performance</h3>
                 
-                <template x-if="studentData.performance.length === 0">
-                    <div class="empty-state">No academic records found</div>
-                </template>
                 
-                <template x-for="semester in [...new Set(studentData.performance.map(r => `${r.year}-${r.semester}`))]">
+                
                     <div>
                         <div class="semester-header">
                             <span>
-                                Academic Year <span x-text="semester.split('-')[0]"></span> - 
-                                Semester <span x-text="semester.split('-')[1]"></span>
+                                Academic Year <span x-text="selected.year"></span> - 
+                                Semester <span x-text="selected.semester"></span>
                             </span>
                             <div>
                                 <span class="gpa-badge">
-                                    GPA: <span x-text="getSemesterGPA(semester.split('-')[0], semester.split('-')[1]) || 'N/A'"></span>
+                                    GPA: <span x-text="getSemesterGPA(selected.year, selected.semester) || 'N/A'"></span>
                                 </span>
-                                <template x-if="getSemesterAttendance(semester.split('-')[0], semester.split('-')[1])">
-                                    <span class="attendance-badge">
-                                        Attendance: <span x-text="getSemesterAttendance(semester.split('-')[0], semester.split('-')[1]).percentage"></span>%
-                                    </span>
-                                </template>
+                              
                             </div>
                         </div>
                         
@@ -329,31 +322,24 @@
                                 <tr>
                                     <th>Course Code</th>
                                     <th>Course Title</th>
-                                    <th>Credits</th>
-                                    <th>Faculty</th>
                                     <th>Marks</th>
                                     <th>Grade</th>
-                                    <th>Points</th>
-                                    <th>Distribution</th>
+                                   
                                 </tr>
                             </thead>
                             <tbody>
-                                <template x-for="course in getSemesterRecords(semester.split('-')[0], semester.split('-')[1])">
+                                <template x-for="course in getSemesterRecords(selected.year, selected.semester)">
                                     <tr>
-                                        <td x-text="course.course_id"></td>
+                                        <td x-text="course.cid"></td>
                                         <td x-text="course.title"></td>
-                                        <td x-text="course.credits"></td>
-                                        <td x-text="course.faculty_name"></td>
                                         <td x-text="course.marks"></td>
                                         <td x-text="course.grade"></td>
-                                        <td x-text="course.points"></td>
-                                        <td x-text="course.distribution_name"></td>
                                     </tr>
                                 </template>
                             </tbody>
                         </table>
                     </div>
-                </template>
+                
             </div>
         </template>
     </div>
