@@ -336,6 +336,9 @@ document.addEventListener('alpine:init', () => {
     init() {
       this.loadYears();
     },
+      hasPerformanceData() {
+      return this.studentData?.performance?.length > 0;
+    },
     
     // Navigation methods
     async loadYears() {
@@ -379,15 +382,37 @@ document.addEventListener('alpine:init', () => {
       }
     },
     
-    async loadStudentData(regno) {
+      // Load detailed student data
+   async loadStudentData(regno) {
       try {
         this.setView('studentData');
+        this.loading = true;
+        this.error = null;
         this.selected.student = regno;
-        this.studentData = await this.fetchData(`/api/student/${regno}/datasheet`);
-      } catch (error) {   
-        this.handleError(error, 'student data');   
+        
+        const response = await fetch(`/api/student/${regno}/datasheet`);
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to load student data');
+        }
+        
+        const data = await response.json();
+        
+        // Ensure performance array exists
+        if (!data.performance) {
+          data.performance = [];
+        }
+        
+        this.studentData = data;
+      } catch (error) {
+        console.error("Error loading student data:", error);
+        this.error = `Failed to load student data: ${error.message}`;
+        this.studentData = null;
+      } finally {
+        this.loading = false;
       }
-    },  
+    },
     
     // Helper methods
     async fetchData(url) {
@@ -417,19 +442,21 @@ document.addEventListener('alpine:init', () => {
     },
     
     // Datasheet helpers
-    getSemesterRecords(year, semester) {
-      return this.studentData?.performance.filter(r => 
-        r.year === year && r.semester === semester
-      ) || [];
-    },
-    
-    getSemesterGPA(year, semester) {
-      if (!this.studentData?.gpa) return null;
-      const found = this.studentData.gpa.find(g => 
-        g.year === year && g.semester === semester
-      );
-      return found ? found.gpa.toFixed(2) : null;
-    },
+   getSemesterRecords(year, semester) {
+  if (!this.studentData || !this.studentData.records) return [];
+  return this.studentData.records.filter(r => 
+    r.year === year && r.semester === semester
+  );
+},
+
+getSemesterGPA(year, semester) {
+  if (!this.studentData || !this.studentData.gpa) return null;
+  const gpa = this.studentData.gpa.find(g => 
+    g.year === year && g.semester === semester
+  );
+  return gpa ? gpa.gpa.toFixed(2) : null;
+}
     
   }));
 });
+
