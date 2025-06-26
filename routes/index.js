@@ -145,54 +145,479 @@
 
 // File: routes/api.js
 
+// import express from 'express';
+// import db from '../db.js';
+
+// const router = express.Router();
+
+// // Get all distinct years
+// router.get('/years', async (req, res) => {
+//   try {
+//     const result = await db.query(`
+//       SELECT DISTINCT year FROM recap ORDER BY year DESC
+//     `);
+//     res.json(result.rows.map(row => row.year));
+//   } catch (err) {
+//     console.error("Database error on /api/years:", err);
+//     res.status(500).json({ error: "Failed to load years" });
+//   }
+// });
+
+// // Get semesters for a specific year
+// router.get('/:year/semesters', async (req, res) => {
+//   const { year } = req.params;
+//   try {
+//     const result = await db.query(`
+//       SELECT DISTINCT semester FROM recap 
+//       WHERE year = $1 
+//       ORDER BY semester
+//     `, [year]);
+//     res.json(result.rows.map(row => row.semester));
+//   } catch (err) {
+//     console.error(`Database error on /api/${year}/semesters:`, err);
+//     res.status(500).json({ error: "Failed to load semesters" });
+//   }
+// });
+
+// // Get classes for a specific year and semester
+// router.get('/:year/:semester/classes', async (req, res) => {
+//   const { year, semester } = req.params;
+//   try {
+//     const result = await db.query(`
+//       SELECT DISTINCT class FROM recap 
+//       WHERE year = $1 AND semester = $2
+//       ORDER BY class
+//     `, [year, semester]);
+//     res.json(result.rows.map(row => row.class));
+//   } catch (err) {
+//     console.error(`Database error on /api/${year}/${semester}/classes:`, err);
+//     res.status(500).json({ error: "Failed to load classes" });
+//   }
+// });
+
+// Get students for a specific year, semester, and class
+// router.get('/:year/:semester/:class/students', async (req, res) => {
+//   const { year, semester, class: classItem } = req.params;
+//   try {
+//     const result = await db.query(`
+//       // SELECT s.regno, s.name 
+//       // FROM cmarks cm
+//       // JOIN student s ON cm.regno = s.regno
+//       // JOIN recap r ON cm.rid = r.rid
+//       // WHERE r.year = $1 AND r.semester = $2 AND r.class = $3
+//       // ORDER BY s.name
+//       SELECT s.regno, s.name,r.class
+//        FROM recap r 
+//       JOIN marks m ON r.rid=m.rid 
+//       JOIN student s ON s.regno=m.regno
+//       WHERE r.year =$1 AND r.semester = $2 AND r.class =$3
+//        ORDER BY r.class asc ;
+//     `, [year, semester, classItem]);
+//     res.json(result.rows);
+//   } catch (err) {
+//     console.error(`Database error on /api/${year}/${semester}/${classItem}/students:`, err);
+//     res.status(500).json({ error: "Failed to load students" });
+//   }
+// });
+// router.get('/:year/:semester/:class/students', async (req, res) => {
+//   const { year, semester, class: className } = req.params;
+
+//   try {
+//     // 1. Get the recap ID first
+//     const recapQuery = await db.query(
+//       `SELECT rid FROM recap 
+//        WHERE year = $1 AND semester = $2 AND class = $3`,
+//       [year, semester, className]
+//     );
+
+//     if (recapQuery.rows.length === 0) {
+//       return res.status(404).json({ error: 'Class record not found' });
+//     }
+
+//     const rid = recapQuery.rows[0].rid;
+
+//     // 2. Get students through cmarks
+//     const studentsQuery = await db.query(
+//       `SELECT s.regno, s.name 
+//        FROM cmarks cm
+//        JOIN student s ON cm.regno = s.regno
+//        WHERE cm.rid = $1
+//        group by s.regno,s.name
+//        ORDER BY s.regno`,
+//       [rid]
+//     );
+
+//     res.json(studentsQuery.rows);
+
+//   } catch (err) {
+//     console.error('Database error:', err);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
+
+// export default router;
+
+
+// import express from 'express';
+// import db from '../db.js';
+
+// const router = express.Router();
+
+// // Existing routes
+// router.get('/years', async (req, res) => {
+//   try {
+//     const result = await db.query(`SELECT DISTINCT year FROM recap ORDER BY year DESC`);
+//     res.json(result.rows.map(row => row.year));
+//   } catch (err) {
+//     console.error("Database error:", err);
+//     res.status(500).json({ error: "Failed to load years" });
+//   }
+// });
+
+// router.get('/:year/semesters', async (req, res) => {
+//   const { year } = req.params;
+//   try {
+//     const result = await db.query(
+//       `SELECT DISTINCT semester FROM recap WHERE year = $1 ORDER BY semester`,
+//       [year]
+//     );
+//     res.json(result.rows.map(row => row.semester));
+//   } catch (err) {
+//     console.error("Database error:", err);
+//     res.status(500).json({ error: "Failed to load semesters" });
+//   }
+// });
+
+// router.get('/:year/:semester/classes', async (req, res) => {
+//   const { year, semester } = req.params;
+//   try {
+//     const result = await db.query(
+//       `SELECT DISTINCT class FROM recap WHERE year = $1 AND semester = $2 ORDER BY class`,
+//       [year, semester]
+//     );
+//     res.json(result.rows.map(row => row.class));
+//   } catch (err) {
+//     console.error("Database error:", err);
+//     res.status(500).json({ error: "Failed to load classes" });
+//   }
+// });
+
+// router.get('/:year/:semester/:class/students', async (req, res) => {
+//   const { year, semester, class: className } = req.params;
+//   try {
+//     const result = await db.query(
+//       `SELECT s.regno, s.name 
+//        FROM cmarks cm
+//        JOIN student s ON cm.regno = s.regno
+//        JOIN recap r ON cm.rid = r.rid
+//        WHERE r.year = $1 AND r.semester = $2 AND r.class = $3
+//        GROUP BY s.regno, s.name
+//        ORDER BY s.name`,
+//       [year, semester, className]
+//     );
+//     res.json(result.rows);
+//   } catch (err) {
+//     console.error("Database error:", err);
+//     res.status(500).json({ error: "Failed to load students" });
+//   }
+// });
+
+// // New routes for student datasheet
+// router.get('/student/:regno/datasheet', async (req, res) => {
+//   const { regno } = req.params;
+//   try {
+//     // Student info
+//     const student = await db.query(
+//       `SELECT * FROM student WHERE regno = $1`, 
+//       [regno]
+//     );
+    
+//     // Academic records grouped by semester
+//     const records = await db.query(`
+//       SELECT 
+//         r.year, r.semester, r.class,
+//         c.course_id, c.title, c.credits,
+//         cm.marks, g.grade, g.points
+//       FROM cmarks cm
+//       JOIN recap r ON cm.rid = r.rid
+//       JOIN course c ON cm.course_id = c.course_id
+//       JOIN grade g ON ROUND(cm.marks) BETWEEN g.start AND g.end
+//       WHERE cm.regno = $1
+//       ORDER BY r.year DESC, r.semester DESC
+//     `, [regno]);
+
+//     // GPA per semester
+//     const gpa = await db.query(`
+//       SELECT 
+//         r.year, r.semester,
+//         SUM(c.credits * g.points) / NULLIF(SUM(c.credits), 0) AS gpa
+//       FROM cmarks cm
+//       JOIN recap r ON cm.rid = r.rid
+//       JOIN course c ON cm.course_id = c.course_id
+//       JOIN grade g ON ROUND(cm.marks) BETWEEN g.start AND g.end
+//       WHERE cm.regno = $1
+//       GROUP BY r.year, r.semester
+//       ORDER BY r.year, r.semester
+//     `, [regno]);
+
+//     // Overall CGPA
+//     const cgpa = await db.query(`
+//       SELECT 
+//         SUM(c.credits * g.points) / NULLIF(SUM(c.credits), 0) AS cgpa
+//       FROM cmarks cm
+//       JOIN course c ON cm.course_id = c.course_id
+//       JOIN grade g ON ROUND(cm.marks) BETWEEN g.start AND g.end
+//       WHERE cm.regno = $1
+//     `, [regno]);
+
+//     res.json({
+//       student: student.rows[0],
+//       records: records.rows,
+//       gpa: gpa.rows,
+//       cgpa: cgpa.rows[0]?.cgpa || 0
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// });
+
+// export default router;
+
 import express from 'express';
-import db from '../db.js'; // Make sure the path to your db.js file is correct
+import db from '../db.js';
 
 const router = express.Router();
 
-// Handles GET /api/years
+// Existing academic browser routes
 router.get('/years', async (req, res) => {
   try {
-    const result = await db.query(`
-      SELECT DISTINCT year FROM recap ORDER BY year DESC
-    `);
+    const result = await db.query('SELECT DISTINCT year FROM recap ORDER BY year DESC');
     res.json(result.rows.map(row => row.year));
   } catch (err) {
-    console.error("❌ Database error on /api/years:", err);
+    console.error("Database error:", err);
     res.status(500).json({ error: "Failed to load years" });
   }
 });
 
-// Handles GET /api/:year/semesters
 router.get('/:year/semesters', async (req, res) => {
   const { year } = req.params;
   try {
-    const result = await db.query(`
-      SELECT DISTINCT semester FROM recap WHERE year = $1 ORDER BY semester
-    `, [year]);
+    const result = await db.query(
+      'SELECT DISTINCT semester FROM recap WHERE year = $1 ORDER BY semester',
+      [year]
+    );
     res.json(result.rows.map(row => row.semester));
   } catch (err) {
-    console.error(`❌ Database error on /api/${year}/semesters:`, err);
+    console.error("Database error:", err);
     res.status(500).json({ error: "Failed to load semesters" });
   }
 });
 
-// Handles GET /api/:year/:semester/students
-router.get('/:year/:semester/students', async (req, res) => {
+router.get('/:year/:semester/classes', async (req, res) => {
   const { year, semester } = req.params;
   try {
-    const result = await db.query(`
-      SELECT s.regno, s.name 
-      FROM cmarks cm
-      JOIN student s ON cm.regno = s.regno
-      JOIN recap r ON cm.rid = r.rid
-      WHERE r.year = $1 AND r.semester = $2
-      ORDER BY s.name
-    `, [year, semester]);
+    const result = await db.query(
+      'SELECT DISTINCT class FROM recap WHERE year = $1 AND semester = $2 ORDER BY class',
+      [year, semester]
+    );
+    res.json(result.rows.map(row => row.class));
+  } catch (err) {
+    console.error("Database error:", err);
+    res.status(500).json({ error: "Failed to load classes" });
+  }
+});
+
+router.get('/:year/:semester/:class/students', async (req, res) => {
+  const { year, semester, class: className } = req.params;
+  try {
+    const result = await db.query(
+      `SELECT s.regno, s.name 
+       FROM cmarks cm
+       JOIN student s ON cm.regno = s.regno
+       JOIN recap r ON cm.rid = r.rid
+       WHERE r.year = $1 AND r.semester = $2 AND r.class = $3
+       GROUP BY s.regno, s.name
+       ORDER BY s.name`,
+      [year, semester, className]
+    );
     res.json(result.rows);
   } catch (err) {
-    console.error(`❌ Database error on /api/${year}/${semester}/students:`, err);
+    console.error("Database error:", err);
     res.status(500).json({ error: "Failed to load students" });
+  }
+});
+
+// Enhanced student datasheet route
+// router.get('/student/:regno/datasheet', async (req, res) => {
+//   const { regno } = req.params;
+  
+//   try {
+//     // 1. Get student basic info
+//     const studentQuery = await db.query(
+//       `SELECT s.*, d.name AS degree_name 
+//        FROM student s
+//        LEFT JOIN degree d ON s.did = d.did
+//        WHERE s.regno = $1`,
+//       [regno]
+//     );
+
+//     if (studentQuery.rows.length === 0) {
+//       return res.status(404).json({ error: 'Student not found' });
+//     }
+
+//     // 2. Get academic performance
+//     const performanceQuery = await db.query(`
+//       SELECT 
+//         r.year,
+//         r.semester,
+//         r.class,
+//         c.cid AS course_id,
+//         c.title,
+//         c.credits,
+//         cm.marks,
+//         g.grade,
+//         g.points,
+//         f.name AS faculty_name,
+//         cd.name AS distribution_name
+//       FROM cmarks cm
+//       JOIN recap r ON cm.rid = r.rid
+//       JOIN course c ON cm.cid = c.cid
+//       JOIN faculty f ON cm.fid = f.fid
+//       JOIN cdist cd ON cm.cdid = cd.cdid
+//       JOIN grade g ON cm.marks BETWEEN g.start AND g.end
+//       WHERE cm.regno = $1
+//       ORDER BY r.year DESC, r.semester DESC
+//     `, [regno]);
+
+//     // 3. Calculate GPA per semester
+//     const gpaQuery = await db.query(`
+//       SELECT 
+//         r.year,
+//         r.semester,
+//         COALESCE(SUM(c.credits * g.points) / NULLIF(SUM(c.credits), 0), 0) AS gpa,
+//         SUM(c.credits) AS credits_earned
+//       FROM cmarks cm
+//       JOIN recap r ON cm.rid = r.rid
+//       JOIN course c ON cm.cid = c.cid
+//       JOIN grade g ON cm.marks BETWEEN g.start AND g.end
+//       WHERE cm.regno = $1
+//       GROUP BY r.year, r.semester
+//       ORDER BY r.year, r.semester
+//     `, [regno]);
+
+//     // 4. Calculate CGPA
+//     const cgpaQuery = await db.query(`
+//       SELECT 
+//         COALESCE(SUM(c.credits * g.points) / NULLIF(SUM(c.credits), 0), 0) AS cgpa,
+//         SUM(c.credits) AS total_credits
+//       FROM cmarks cm
+//       JOIN course c ON cm.cid = c.cid
+//       JOIN grade g ON cm.marks BETWEEN g.start AND g.end
+//       WHERE cm.regno = $1
+//     `, [regno]);
+
+//     // 5. Get attendance summary
+//     const attendanceQuery = await db.query(`
+//       SELECT 
+//         r.year,
+//         r.semester,
+//         COUNT(*) AS total_classes,
+//         SUM(CASE WHEN a.status THEN 1 ELSE 0 END) AS attended,
+//         ROUND(SUM(CASE WHEN a.status THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0), 2) AS percentage
+//       FROM attendance a
+//       JOIN cdist cd ON a.cdid = cd.cdid
+//       JOIN recap r ON cd.rid = r.rid
+//       WHERE a.regno = $1
+//       GROUP BY r.year, r.semester
+//       ORDER BY r.year, r.semester
+//     `, [regno]);
+
+//     res.json({
+//       student: studentQuery.rows[0],
+//       performance: performanceQuery.rows,
+//       gpa: gpaQuery.rows,
+//       cgpa: cgpaQuery.rows[0]?.cgpa || 0,
+//       total_credits: cgpaQuery.rows[0]?.total_credits || 0,
+//       attendance: attendanceQuery.rows
+//     });
+
+//   } catch (err) {
+//     console.error('DATASHEET ERROR:', err);
+//     res.status(500).json({ 
+//       error: 'Internal server error',
+//       details: process.env.NODE_ENV === 'development' ? {
+//         message: err.message,
+//         query: err.query,
+//         parameters: err.parameters
+//       } : null
+//     });
+//   }
+// });
+router.get('/student/:regno/datasheet', async (req, res) => {
+  const { regno } = req.params;
+  
+  try {
+    // 2. Get academic records with proper joins
+    const records = await db.query(`
+      SELECT 
+        r.year,
+        r.semester,
+        r.class,
+        c.cid AS course_id,
+        c.title,
+        c.credits,
+        cm.marks,
+        g.grade,
+        g.gpa,
+        f.name AS faculty_name
+      FROM cmarks cm
+      JOIN recap r ON cm.rid = r.rid
+      JOIN course c ON cm.cid = c.cid
+      JOIN faculty f ON cm.fid = f.fid
+      JOIN grade g ON cm.marks BETWEEN g.start AND g.end
+      WHERE cm.regno = $1
+      ORDER BY r.year DESC, r.semester DESC
+    `, [regno]);
+
+    // 3. Calculate GPA per semester
+    const gpa = await db.query(`
+      SELECT 
+        r.year,
+        r.semester,
+        COALESCE(SUM(c.credits * g.points) / NULLIF(SUM(c.credits), 0), 0) AS gpa
+      FROM cmarks cm
+      JOIN recap r ON cm.rid = r.rid
+      JOIN course c ON cm.cid = c.cid
+      JOIN grade g ON cm.marks BETWEEN g.start AND g.end
+      WHERE cm.regno = $1
+      GROUP BY r.year, r.semester
+      ORDER BY r.year, r.semester
+    `, [regno]);
+
+    // 4. Calculate CGPA
+    const cgpa = await db.query(`
+      SELECT 
+        COALESCE(SUM(c.credits * g.points) / NULLIF(SUM(c.credits), 0), 0) AS cgpa
+      FROM cmarks cm
+      JOIN course c ON cm.cid = c.cid
+      JOIN grade g ON cm.marks BETWEEN g.start AND g.end
+      WHERE cm.regno = $1
+    `, [regno]);
+
+    res.json({
+      student: student.rows[0],
+      records: records.rows,
+      gpa: gpa.rows,
+      cgpa: cgpa.rows[0]?.cgpa || 0
+    });
+
+  } catch (err) {
+    console.error('DATASHEET ERROR:', err);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
