@@ -34,6 +34,7 @@
 import express from 'express';
 import path from 'path'; // Helper module for file paths
 import apiRouter from './routes/index.js'; // Import the router
+import cors from 'cors'
 
 // This helps resolve the directory name in ES Modules
 import { fileURLToPath } from 'url';
@@ -42,6 +43,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 4500;
+app.use(cors());
 
 // Middleware 1: Serve static files from the 'public' directory
 // This makes index.html and app.js accessible to the browser.
