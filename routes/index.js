@@ -1,4 +1,8 @@
-// import express from "express";
+
+
+
+
+
 // const router = express.Router();
 // import db from "../db.js";  // Default import (no braces)
 
@@ -558,58 +562,84 @@ router.get('/student/:regno/datasheet', async (req, res) => {
   const { regno } = req.params;
   
   try {
-    // 2. Get academic records with proper joins
-    const records = await db.query(`
-      SELECT 
-        r.year,
-        r.semester,
-        r.class,
-        c.cid AS course_id,
-        c.title,
-        c.credits,
-        cm.marks,
-        g.grade,
-        g.gpa,
-        f.name AS faculty_name
-      FROM cmarks cm
-      JOIN recap r ON cm.rid = r.rid
-      JOIN course c ON cm.cid = c.cid
-      JOIN faculty f ON cm.fid = f.fid
-      JOIN grade g ON cm.marks BETWEEN g.start AND g.end
-      WHERE cm.regno = $1
-      ORDER BY r.year DESC, r.semester DESC
+    // 1. Get student basic info first
+    const studentQuery = await db.query(
+      `SELECT * FROM student WHERE regno = $1`,
+      [regno]
+    );
+
+    if (studentQuery.rows.length === 0) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // 2. Get academic records
+    const recordsQuery = await db.query(`
+SELECT 
+  c.cid,
+  c.title,
+  c.theory,
+  c.lab,
+  (SELECT SUM(m.marks) 
+   FROM cmarks m 
+   WHERE m.regno = $1 
+   AND m.rid IN (SELECT r.rid FROM recap r WHERE r.cid = c.cid)
+  ) AS total_marks,
+  (
+    SELECT g.grade
+    FROM grade g
+    WHERE ROUND(
+      (SELECT SUM(m.marks)
+      FROM cmarks m 
+      WHERE m.regno = $1 
+      AND m.rid IN (SELECT r.rid FROM recap r WHERE r.cid = c.cid)
+    )) BETWEEN g.start AND g.end
+    LIMIT 1
+  ) AS final_grade
+FROM course c
+WHERE EXISTS (
+  SELECT 1 
+  FROM cmarks cm
+  JOIN recap r ON cm.rid = r.rid
+  WHERE cm.regno = $1 AND r.cid = c        .cid
+)
+ORDER BY c.cid;
     `, [regno]);
 
     // 3. Calculate GPA per semester
-    const gpa = await db.query(`
+    const gpaQuery = await db.query(`
       SELECT 
         r.year,
         r.semester,
-        COALESCE(SUM(c.credits * g.points) / NULLIF(SUM(c.credits), 0), 0) AS gpa
+        COALESCE(SUM(cm.marks*(c.lab+c.theory)) / NULLIF(SUM(c.lab+c.theory), 0), 0) AS gpa
       FROM cmarks cm
       JOIN recap r ON cm.rid = r.rid
-      JOIN course c ON cm.cid = c.cid
-      JOIN grade g ON cm.marks BETWEEN g.start AND g.end
+      JOIN course c ON r.cid = c.cid
+      JOIN grade g ON ROUND(cm.marks) BETWEEN g.start AND g.end
       WHERE cm.regno = $1
       GROUP BY r.year, r.semester
       ORDER BY r.year, r.semester
     `, [regno]);
 
     // 4. Calculate CGPA
-    const cgpa = await db.query(`
-      SELECT 
-        COALESCE(SUM(c.credits * g.points) / NULLIF(SUM(c.credits), 0), 0) AS cgpa
+    const cgpaQuery = await db.query(`
+       SELECT 
+        r.year,
+        r.semester,
+        COALESCE(SUM(cm.marks*(c.lab+c.theory)) / NULLIF(SUM(c.lab + c.theory), 0), 0) AS gpa
       FROM cmarks cm
-      JOIN course c ON cm.cid = c.cid
-      JOIN grade g ON cm.marks BETWEEN g.start AND g.end
+      JOIN recap r ON cm.rid = r.rid
+      JOIN course c ON r.cid = c.cid
+      JOIN grade g ON ROUND(cm.marks) BETWEEN g.start AND g.end
       WHERE cm.regno = $1
+      GROUP BY r.year, r.semester
+      ORDER BY r.year, r.semester
     `, [regno]);
 
     res.json({
-      student: student.rows[0],
-      records: records.rows,
-      gpa: gpa.rows,
-      cgpa: cgpa.rows[0]?.cgpa || 0
+      student: studentQuery.rows[0],
+      records: recordsQuery.rows,
+      gpa: gpaQuery.rows,
+      cgpa: cgpaQuery.rows[0]?.cgpa || 0
     });
 
   } catch (err) {
