@@ -18,9 +18,9 @@ import 'dotenv/config';
 const db = new Pool({
     user: "postgres",
     host: "localhost",
-    database: "exams",
+    database: "postgres",
     password: "demo",
-    port: 5432
+    port: 5433
 });
 
 
