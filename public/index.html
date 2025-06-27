@@ -290,11 +290,11 @@
                     </div>
                     <div class="info-item">
                         <div class="info-label">Overall CGPA</div>
-                        <div x-text="studentData.cgpa.toFixed(2)" class="highlight"></div>
+                        <div x-text="studentData.cgpa"></div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Total Credits Earned</div>
-                        <div x-text="studentData.total_credits || 0"></div>
+                        <div x-text="studentData.totalcredits"></div>
                     </div>
                 </div>
 
@@ -311,7 +311,8 @@
                             </span>
                             <div>
                                 <span class="gpa-badge">
-                                    GPA: <span x-text="getSemesterGPA(selected.year, selected.semester) || 'N/A'"></span>
+                                    GPA: <span x-text="getSemesterGPA(studentData.student.regno, selected.year, selected.semester) || 'N/A'"></span>
+                                    <!--GPA: <span x-text="getSemesterGPA('48868', '1952', 'selected.semester') || 'N/A'"></span>-->
                                 </span>
                               
                             </div>
@@ -322,20 +323,27 @@
                                 <tr>
                                     <th>Course Code</th>
                                     <th>Course Title</th>
+                                    <th>Theory Credits</th>
+                                    <th>Lab Credits</th>
+                                    <th>Total Credits</th>
                                     <th>Marks</th>
                                     <th>Grade</th>
-                                   
+                                    <th>GPA</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <template x-for="course in getSemesterRecords(selected.year, selected.semester)">
-                                    <tr>
-                                        <td x-text="course.cid"></td>
+                                    <template x-for="course in getSemesterRecords(selected.year, selected.semester)" :key="course.code">
+                                        <tr>
+                                        <td x-text="course.code"></td>
                                         <td x-text="course.title"></td>
+                                        <td x-text="course.theorycredits"></td>
+                                        <td x-text="course.labcredits"></td>
+                                        <td x-text="course.totalcredits"></td>
                                         <td x-text="course.marks"></td>
                                         <td x-text="course.grade"></td>
-                                    </tr>
-                                </template>
+                                        <td x-text="course.gpa"></td>   <!-- Note: the example record had gpa property? -->
+                                        </tr>
+                                    </template>
                             </tbody>
                         </table>
                     </div>

@@ -560,7 +560,7 @@ router.get('/:year/:semester/:class/students', async (req, res) => {
 // });
 router.get('/student/:regno/datasheet', async (req, res) => {
   const { regno } = req.params;
-  
+  const { year, semester } = req.query;
   try {
     // 1. Get student basic info first
     const studentQuery = await db.query(
@@ -574,73 +574,92 @@ router.get('/student/:regno/datasheet', async (req, res) => {
 
     // 2. Get academic records
     const recordsQuery = await db.query(`
-SELECT 
-  c.cid,
-  c.title,
-  c.theory,
-  c.lab,
-  (SELECT SUM(m.marks) 
-   FROM cmarks m 
-   WHERE m.regno = $1 
-   AND m.rid IN (SELECT r.rid FROM recap r WHERE r.cid = c.cid)
-  ) AS total_marks,
-  (
-    SELECT g.grade
-    FROM grade g
-    WHERE ROUND(
-      (SELECT SUM(m.marks)
-      FROM cmarks m 
-      WHERE m.regno = $1 
-      AND m.rid IN (SELECT r.rid FROM recap r WHERE r.cid = c.cid)
-    )) BETWEEN g.start AND g.end
-    LIMIT 1
-  ) AS final_grade
-FROM course c
-WHERE EXISTS (
-  SELECT 1 
-  FROM cmarks cm
-  JOIN recap r ON cm.rid = r.rid
-  WHERE cm.regno = $1 AND r.cid = c        .cid
-)
-ORDER BY c.cid;
-    `, [regno]);
+        select code, title, theorycredits, labcredits, totalcredits, marks, grade, gpa from exam_marks
+        where regno = $1 and year = $2 and semester = $3`, [regno, year, semester]);
 
-    // 3. Calculate GPA per semester
-    const gpaQuery = await db.query(`
+
+    /*
+    const recordsQuery = await db.query(`
       SELECT 
-        r.year,
-        r.semester,
-        COALESCE(SUM(cm.marks*(c.lab+c.theory)) / NULLIF(SUM(c.lab+c.theory), 0), 0) AS gpa
-      FROM cmarks cm
-      JOIN recap r ON cm.rid = r.rid
-      JOIN course c ON r.cid = c.cid
-      JOIN grade g ON ROUND(cm.marks) BETWEEN g.start AND g.end
-      WHERE cm.regno = $1
-      GROUP BY r.year, r.semester
-      ORDER BY r.year, r.semester
+        c.cid,
+        c.title,
+        c.theory,
+        c.lab,
+        (SELECT SUM(m.marks) 
+        FROM cmarks m 
+        WHERE m.regno = $1 
+        AND m.rid IN (SELECT r.rid FROM recap r WHERE r.cid = c.cid)
+        ) AS total_marks,
+        (
+          SELECT g.grade
+          FROM grade g
+          WHERE ROUND(
+            (SELECT SUM(m.marks)
+            FROM cmarks m 
+            WHERE m.regno = $1 
+            AND m.rid IN (SELECT r.rid FROM recap r WHERE r.cid = c.cid)
+          )) BETWEEN g.start AND g.end
+          LIMIT 1
+        ) AS final_grade
+      FROM course c
+      WHERE EXISTS (
+        SELECT 1 
+        FROM cmarks cm
+        JOIN recap r ON cm.rid = r.rid
+        WHERE cm.regno = $1 AND r.cid = c        .cid
+      )
+      ORDER BY c.cid;
     `, [regno]);
-
+    */
+    // 3. Calculate GPA per semester
+    
+    const gpaQuery = await db.query(`
+      select regno, semester, year, class, round((aa.tm/aa.tt),2) gpa from (
+        select regno, semester, year, class, sum(totalcredits) tt, sum(gpa*totalcredits) tm from exam_marks
+        group by regno, semester, year, class
+      ) aa
+      where regno = $1 and year = $2 and semester = $3 
+      order by regno, class, semester, year, class`, [regno, year, semester]);
+  
     // 4. Calculate CGPA
-    const cgpaQuery = await db.query(`
-       SELECT 
-        r.year,
-        r.semester,
-        COALESCE(SUM(cm.marks*(c.lab+c.theory)) / NULLIF(SUM(c.lab + c.theory), 0), 0) AS gpa
-      FROM cmarks cm
-      JOIN recap r ON cm.rid = r.rid
-      JOIN course c ON r.cid = c.cid
-      JOIN grade g ON ROUND(cm.marks) BETWEEN g.start AND g.end
-      WHERE cm.regno = $1
-      GROUP BY r.year, r.semester
-      ORDER BY r.year, r.semester
-    `, [regno]);
 
+      const cgpaQuery = await db.query(`
+        SELECT 
+            regn AS regnumber,  -- Use the alias from bb subquery
+            SUM(tt) AS total_credits,
+            ROUND(SUM(tm) / SUM(tt), 2) AS cgpa  -- Calculate CGPA correctly
+        FROM (
+            SELECT 
+                regnumber AS regn, 
+                semester, 
+                year, 
+                class, 
+                tt, 
+                tm  -- Keep tm for CGPA calculation
+            FROM (
+                SELECT 
+                    regno AS regnumber, 
+                    semester, 
+                    year, 
+                    class, 
+                    SUM(totalcredits) AS tt, 
+                    SUM(gpa * totalcredits) AS tm 
+                FROM exam_marks
+                WHERE regno = $1
+                GROUP BY regno, semester, year, class
+            ) aa
+        ) bb
+        GROUP BY regn;`, [regno]);
+    
     res.json({
       student: studentQuery.rows[0],
       records: recordsQuery.rows,
       gpa: gpaQuery.rows,
-      cgpa: cgpaQuery.rows[0]?.cgpa || 0
+      cgpa: cgpaQuery.rows[0]?.cgpa || 0,
+      totalcredits: cgpaQuery.rows[0]?.total_credits || 0
     });
+
+    console.log(` Response : ${cgpaQuery.rows[0]?.total_credits || 0} credits and CGPA: ${cgpaQuery.rows[0]?.cgpa || 0}`);
 
   } catch (err) {
     console.error('DATASHEET ERROR:', err);

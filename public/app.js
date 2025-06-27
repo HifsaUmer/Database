@@ -308,6 +308,10 @@
 //     }
 //   }));
 // });
+
+
+// This script initializes the Alpine.js component for the academic browser.
+// It sets up the data structure, methods for loading data, and error handling.
 document.addEventListener('alpine:init', () => {
   Alpine.data('academicBrowser', () => ({
     // Navigation state
@@ -350,6 +354,7 @@ document.addEventListener('alpine:init', () => {
       }
     },
     
+    // Load semesters for a selected year
     async loadSemesters(year) {
       try {
         this.setView('semesters');
@@ -360,6 +365,7 @@ document.addEventListener('alpine:init', () => {
       }
     },
     
+    // Load classes for a selected semester
     async loadClass(semester) {
       try {
         this.setView('classes');
@@ -370,6 +376,7 @@ document.addEventListener('alpine:init', () => {
       }
     },
     
+    // Load students for a selected class
     async loadStudents(classItem) {
       try {
         this.setView('students');
@@ -389,9 +396,9 @@ document.addEventListener('alpine:init', () => {
         this.loading = true;
         this.error = null;
         this.selected.student = regno;
-        
-        const response = await fetch(`/api/student/${regno}/datasheet`);
-        
+
+        const response = await fetch(`/api/student/${regno}/datasheet?year=${this.selected.year}&semester=${this.selected.semester}`);
+
         if (!response.ok) {
           const error = await response.json();
           throw new Error(error.message || 'Failed to load student data');
@@ -443,18 +450,58 @@ document.addEventListener('alpine:init', () => {
     
     // Datasheet helpers
    getSemesterRecords(year, semester) {
+
+    console.log("Fetching semester records for:", { year, semester });
+    console.log("Student data:", this.studentData.records);
   if (!this.studentData || !this.studentData.records) return [];
-  return this.studentData.records.filter(r => 
-    r.year === year && r.semester === semester
-  );
+  return this.studentData.records;
 },
 
-getSemesterGPA(year, semester) {
-  if (!this.studentData || !this.studentData.gpa) return null;
-  const gpa = this.studentData.gpa.find(g => 
-    g.year === year && g.semester === semester
-  );
-  return gpa ? gpa.gpa.toFixed(2) : null;
+getSemesterGPA(regno, year, semester) {
+
+  // Validate parameters
+  console.log(regno);
+  console.log(year);
+  console.log(semester);
+  console.log("Searching for GPA with:", {
+    regno: regno,
+    year: String(year),
+    semester: semester.toLowerCase()
+  });
+  if (!this.studentData || !this.studentData.gpa) {
+    console.log("No student data or GPA data available");
+    return null;
+  }
+
+  // Add detailed debugging logs
+  console.log("Searching for GPA with:", {
+    regno,
+    year: String(year),
+    semester: semester.toLowerCase()
+  });
+  
+  console.log("Available GPA records:", this.studentData.gpa);
+  
+  const normSemester = (semester || '').trim().toLowerCase();
+  const normYear = String(year);
+  
+  const gpa = this.studentData.gpa.find(g => {
+    const match = 
+      g.regno === regno && 
+      String(g.year) === normYear && 
+      (g.semester || '').toLowerCase() === normSemester;
+
+    console.log(`Checking record:`, g, `Match: ${match}`);
+    return match;
+  });
+  
+  if (gpa) {
+    console.log("Found matching GPA record:", gpa);
+    return parseFloat(gpa.gpa).toFixed(2);
+  }
+
+  console.log("No matching GPA record found");
+  return null;
 }
     
   }));
