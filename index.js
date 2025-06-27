@@ -1,35 +1,4 @@
 
-// import express from 'express';
-// import path from 'path';
- 
-
-// import { fileURLToPath } from 'url';
-// import indexRouter from './routes/index.js'; // Ensure this file exists!
-
-
-// const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// import cors from 'cors'; 
-// const app = express();
-// const PORT = process.env.PORT || 4598;
-
- 
-// // Middleware
-// app.use(express.static(path.join(__dirname, 'public')));
-// app.use(express.json());
-// app.use(cors());
-// // Routes
-// app.get('/', (req, res) => {
-//     res.sendFile(path.join(__dirname, 'index.html'));
-// });
-
-// app.use('/api', indexRouter);
-
-// // Start server
-// app.listen(PORT, () => {
-//     console.log(`Server running on http://localhost:${PORT}`);
-// });
-// File: server.js
 
 import express from 'express';
 import path from 'path'; // Helper module for file paths
